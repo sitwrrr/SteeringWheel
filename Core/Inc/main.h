@@ -79,6 +79,10 @@ void Error_Handler(void);
 #define KEY8_GPIO_Port GPIOB
 #define SHIFT_UP_Pin GPIO_PIN_15
 #define SHIFT_UP_GPIO_Port GPIOB
+#define PWR_4G_Pin GPIO_PIN_12
+#define PWR_4G_GPIO_Port GPIOD
+#define RST_4G_Pin GPIO_PIN_13
+#define RST_4G_GPIO_Port GPIOD
 #define LCD_BL_Pin GPIO_PIN_5
 #define LCD_BL_GPIO_Port GPIOB
 #define LCD_RST_Pin GPIO_PIN_6

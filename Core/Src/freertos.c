@@ -126,6 +126,7 @@ void key_scan_task(void *argument);
 void usb_poll_task(void *argument);
 void mode_detect_task(void *argument);
 
+extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /* Hook prototypes */
@@ -220,6 +221,8 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE END Header_lvgl_task */
 void lvgl_task(void *argument)
 {
+  /* init code for USB_DEVICE */
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN lvgl_task */
   /* Infinite loop */
   for(;;)

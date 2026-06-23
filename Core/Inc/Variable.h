@@ -1,0 +1,109 @@
+#ifndef __VARIABLE_H
+#define __VARIABLE_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "stm32h7xx_hal.h"
+#include "cmsis_os2.h"
+
+/* 车辆数据结构体 */
+typedef struct {
+    /* 车速 */
+    uint16_t speed;
+    
+    /* 电机数据 */
+    uint16_t rpm_left;
+    uint16_t rpm_right;
+    int16_t torque_left;
+    int16_t torque_right;
+    uint8_t temp_motor_left;
+    uint8_t temp_motor_right;
+    uint8_t temp_controller_left;
+    uint8_t temp_controller_right;
+    
+    /* 电池数据 */
+    uint16_t voltage;
+    int16_t current;
+    uint8_t soc;
+    uint16_t temp_battery;
+    uint16_t cell_voltage_min;
+    
+    /* 车辆状态 */
+    uint8_t gear;           /* 0:N, 1:AC, 2:SK, 3:AU, 4:EF */
+    uint8_t brake;
+    uint8_t throttle;
+    uint8_t steering_angle;
+    
+    /* 加速度 */
+    int16_t accel_x;
+    int16_t accel_y;
+    int16_t accel_z;
+    int16_t yaw_rate;
+    
+    /* 安全信号 */
+    uint8_t safety_loop;
+    uint8_t bms_fault;
+    uint8_t mcu_fault;
+    uint8_t precharge;
+    uint8_t self_check;
+    
+    /* 输入状态 */
+    uint8_t key_state;          /* 按键位掩码 */
+    uint8_t key_clicked;        /* 最后点击的按键编号 */
+    uint8_t shift_up;           /* 升挡状态 */
+    uint8_t shift_down;         /* 降挡状态 */
+    
+    /* 时间戳 */
+    uint32_t timestamp;
+} VehicleData_t;
+
+/* 工作模式枚举 */
+typedef enum {
+    MODE_STANDBY = 0,       /* 待机模式 */
+    MODE_VEHICLE,           /* 实车模式 */
+    MODE_SIMULATOR,         /* 模拟器模式 */
+    MODE_STORAGE            /* 存储模式 */
+} WorkMode_t;
+
+/* 挡位枚举 */
+typedef enum {
+    GEAR_N = 0,             /* 空挡 */
+    GEAR_AC = 1,            /* 加速 */
+    GEAR_SK = 2,            /* 蛇形 */
+    GEAR_AU = 3,            /* 自动 */
+    GEAR_EF = 4             /* 紧急 */
+} GearType_t;
+
+/* 全局变量声明 */
+extern VehicleData_t g_vehicleData;
+extern WorkMode_t g_workMode;
+extern osMutexId_t g_dataMutex;
+extern osEventFlagsId_t canEventHandle;
+
+/* CAN接收标志 */
+extern volatile uint8_t g_can1Received;
+extern volatile uint8_t g_can2Received;
+
+/* USB接收缓冲区 */
+extern uint8_t g_usbRxBuffer[256];
+extern volatile uint16_t g_usbRxLength;
+
+/* MQTT状态 */
+extern volatile uint8_t g_mqttConnected;
+extern volatile uint8_t g_mqttUploading;
+
+/* Flash存储状态 */
+extern volatile uint8_t g_storageActive;
+extern uint32_t g_storageCount;
+
+/* 函数声明 */
+void Variable_Init(void);
+void VehicleData_Reset(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __VARIABLE_H */
