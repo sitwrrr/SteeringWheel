@@ -58,6 +58,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     BSP/bsp_input.c
     # ----- App应用层 -----
     App/app_can.c
+    App/app_motec.c
     App/app_ec200.c
     App/app_simhub.c
     App/app_ws2812b.c

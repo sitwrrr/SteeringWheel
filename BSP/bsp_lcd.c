@@ -8,6 +8,7 @@
 #include "bsp_lcd.h"
 #include "fmc.h"
 #include "gpio.h"
+#include <stdlib.h>
 
 /* Private defines ----------------------------------------------------------*/
 #define LCD_BASE    (uint32_t)((0x60000000 + (0x4000000 * (LCD_FMC_NEX - 1))) | (((1 << LCD_FMC_AX) * 2) - 2))

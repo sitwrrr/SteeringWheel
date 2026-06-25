@@ -27,20 +27,31 @@ typedef struct {
     uint16_t voltage;
     int16_t current;
     uint8_t soc;
+    uint8_t soh;
     uint16_t temp_battery;
+    uint16_t cell_voltage_max;
     uint16_t cell_voltage_min;
+    uint8_t bat_state;
+    uint8_t bat_alarm_level;
+    uint8_t bat_life;
     
     /* 车辆状态 */
     uint8_t gear;           /* 0:N, 1:AC, 2:SK, 3:AU, 4:EF */
     uint8_t brake;
     uint8_t throttle;
     uint8_t steering_angle;
+    uint8_t car_travel;     /* 行驶里程 */
     
     /* 加速度 */
     int16_t accel_x;
     int16_t accel_y;
     int16_t accel_z;
     int16_t yaw_rate;
+    
+    /* 姿态角 */
+    float roll;
+    float pitch;
+    float yaw;
     
     /* 安全信号 */
     uint8_t safety_loop;

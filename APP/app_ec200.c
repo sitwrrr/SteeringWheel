@@ -6,6 +6,7 @@
  */
 
 #include "app_ec200.h"
+#include "app_motec.h"
 #include "bsp_ec200.h"
 #include "Variable.h"
 #include <string.h>
@@ -37,9 +38,9 @@ static void MQTT_Publish(const char *data)
 }
 
 /**
- * @brief 打包JSON数据
+ * @brief 打包电车JSON数据
  */
-static void jsonPack(void)
+static void jsonPackElectric(void)
 {
     static uint8_t changeFlag = 0;
     char json[300];
@@ -68,18 +69,55 @@ static void jsonPack(void)
                 g_vehicleData.torque_left,
                 g_vehicleData.torque_right,
                 (int)g_vehicleData.current,
-                0,  /* carTravel */
+                (int)g_vehicleData.car_travel,
                 g_vehicleData.temp_controller_left,
                 g_vehicleData.temp_controller_right,
                 g_vehicleData.brake,
                 g_vehicleData.temp_motor_left,
                 g_vehicleData.temp_motor_right,
                 g_vehicleData.steering_angle,
-                0.0f, 0.0f, 0.0f, 0.0f);
+                0.0f, 0.0f, 0, 0);
         changeFlag = 0;
     }
     
     MQTT_Publish(json);
+}
+
+/**
+ * @brief 打包油车JSON数据
+ */
+static void jsonPackFuel(void)
+{
+    char json[300];
+    
+    sprintf(json, "{1,%d,%d,%d,%d,%d,%f,%d,%d,%f,%f,%f,%f,%d,%d}",
+            (int)g_motecData.frontSpeed,
+            (int)g_motecData.throttlePosition,
+            0,  /* bms_fault */
+            (int)g_motecData.engineRPM,
+            0,  /* rpm_right */
+            0.0f,
+            g_motecData.gear,
+            g_motecData.gear,
+            0.0f, 0.0f, 0.0f, 0.0f,
+            0, 0);
+    
+    MQTT_Publish(json);
+}
+
+/**
+ * @brief 打包JSON数据（自动切换油车/电车）
+ */
+static void jsonPack(void)
+{
+    if (APP_Motec_GetCarType() == 1)
+    {
+        jsonPackFuel();
+    }
+    else
+    {
+        jsonPackElectric();
+    }
 }
 
 /* Exported functions -------------------------------------------------------*/

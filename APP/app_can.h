@@ -16,11 +16,23 @@ extern "C" {
 #include "Variable.h"
 
 /* Exported defines ----------------------------------------------------------*/
-#define CAN_ID_MOTOR_DATA      0x211
-#define CAN_ID_BATTERY_DATA    0x212
-#define CAN_ID_TEMP_DATA       0x213
-#define CAN_ID_ACCEL_DATA      0x214
-#define CAN_ID_SAFETY_DATA     0x050
+/* FDCAN1 标准ID */
+#define CAN_ID_VCU_SUMMARY     0x211    /* VCU汇总: 车速/踏板/安全信号 */
+
+/* FDCAN1 扩展ID (VCU↔MCU通信，仪表旁听) */
+#define CAN_ID_VCU_TO_MCU1     0x08C1EF21  /* VCU→左电机 */
+#define CAN_ID_VCU_TO_MCU2     0x08B1EF21  /* VCU→右电机 */
+#define CAN_ID_MCU1_TO_VCU     0x0CFFC6EF  /* 左电机→VCU (状态) */
+#define CAN_ID_MCU2_TO_VCU     0x0CB221EF  /* 右电机→VCU (状态) */
+#define CAN_ID_MCU1_TO_VCU2    0x0CFFC7EF  /* 左电机→VCU (温度/电压/电流) */
+#define CAN_ID_MCU2_TO_VCU2    0x0CB321EF  /* 右电机→VCU (温度/电压/电流) */
+
+/* FDCAN2 标准ID */
+#define CAN_ID_IMU             0x050    /* IMU传感器: 加速度/姿态角 */
+
+/* FDCAN2 扩展ID (BMS) */
+#define CAN_ID_BMS_STATUS      0x186040F3  /* BMS: 电压/电流/SOC/状态 */
+#define CAN_ID_BMS_CELL_VOLT   0x186140F3  /* BMS: 最高/最低单体电压 */
 
 /* Exported functions --------------------------------------------------------*/
 void APP_CAN_Init(void);

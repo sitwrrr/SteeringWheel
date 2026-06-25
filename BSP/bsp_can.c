@@ -93,7 +93,7 @@ void BSP_CAN1_Send(uint32_t id, uint8_t *data, uint8_t len)
     txHeader1.Identifier = id;
     txHeader1.IdType = FDCAN_EXTENDED_ID;
     txHeader1.TxFrameType = FDCAN_DATA_FRAME;
-    txHeader1.DataLength = len << 16;
+    txHeader1.DataLength = FDCAN_DLC_BYTES_8;
     txHeader1.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
     txHeader1.BitRateSwitch = FDCAN_BRS_OFF;
     txHeader1.FDFormat = FDCAN_CLASSIC_CAN;
@@ -114,7 +114,7 @@ void BSP_CAN2_Send(uint32_t id, uint8_t *data, uint8_t len)
     txHeader2.Identifier = id;
     txHeader2.IdType = FDCAN_EXTENDED_ID;
     txHeader2.TxFrameType = FDCAN_DATA_FRAME;
-    txHeader2.DataLength = len << 16;
+    txHeader2.DataLength = FDCAN_DLC_BYTES_8;
     txHeader2.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
     txHeader2.BitRateSwitch = FDCAN_BRS_OFF;
     txHeader2.FDFormat = FDCAN_CLASSIC_CAN;

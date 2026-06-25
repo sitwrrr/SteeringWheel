@@ -47,7 +47,7 @@ void BSP_USB_Init(void)
  */
 void BSP_USB_SendData(uint8_t *data, uint16_t len)
 {
-    CDC_Transmit(NULL, data, len);
+    CDC_Transmit_FS(data, len);
 }
 
 /**
@@ -63,7 +63,7 @@ void BSP_USB_Printf(const char *format, ...)
     length = vsnprintf((char *)txBuffer, USB_TX_BUFFER_SIZE, format, args);
     va_end(args);
     
-    CDC_Transmit(NULL, txBuffer, length);
+    CDC_Transmit_FS(txBuffer, length);
 }
 
 /**
@@ -84,7 +84,8 @@ void BSP_USB_SendHIDReport(uint8_t buttons)
     joyStick_HID.button_group0 = buttons & 0xFF;
     joyStick_HID.button_group1 = (buttons >> 8) & 0xFF;
     
-    USBD_HID_Mouse_SendReport(&hUsbDevice, (uint8_t *)&joyStick_HID, sizeof(joyStick_HID_t));
+    /* TODO: HID类库未集成，暂不发送 */
+    // USBD_HID_SendReport(&hUsbDevice, (uint8_t *)&joyStick_HID, sizeof(joyStick_HID_t));
 }
 
 /**
