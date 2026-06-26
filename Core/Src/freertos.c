@@ -25,7 +25,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "app_can.h"
+#include "app_ec200.h"
+#include "Variable.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,7 +68,7 @@ osThreadId_t can_processHandle;
 const osThreadAttr_t can_process_attributes = {
   .name = "can_process",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityRealtime2,
+  .priority = (osPriority_t) osPriorityRealtime4,
 };
 /* Definitions for ec200_init */
 osThreadId_t ec200_initHandle;
@@ -260,10 +262,14 @@ void lvgl_meter_task(void *argument)
 void can_process_task(void *argument)
 {
   /* USER CODE BEGIN can_process_task */
-  /* Infinite loop */
+  APP_CAN_Init();
+  
   for(;;)
   {
-    osDelay(1);
+    APP_CAN_TaskProcess();  /* 阻塞在队列上，有消息就解析 */
+
+    /* 解析完后通知MQTT上传任务 */
+    osThreadFlagsSet(iot_uploadHandle, 0x01);
   }
   /* USER CODE END can_process_task */
 }
@@ -288,18 +294,22 @@ void ec200_init_task(void *argument)
 
 /* USER CODE BEGIN Header_iot_upload_task */
 /**
-* @brief Function implementing the iot_upload thread.
-* @param argument: Not used
-* @retval None
-*/
+ * @brief MQTT数据上传任务
+ *        定时读取g_vehicleData并上传到云端
+ */
 /* USER CODE END Header_iot_upload_task */
 void iot_upload_task(void *argument)
 {
   /* USER CODE BEGIN iot_upload_task */
-  /* Infinite loop */
+  APP_EC200_Init();
+  
   for(;;)
   {
-    osDelay(1);
+    /* 等待CAN任务通知（有新数据） */
+    osThreadFlagsWait(0x01U, osFlagsWaitAny, osWaitForever);
+    
+    /* 上传数据 */
+    APP_EC200_Upload();
   }
   /* USER CODE END iot_upload_task */
 }

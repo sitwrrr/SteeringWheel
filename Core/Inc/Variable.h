@@ -13,9 +13,15 @@ typedef struct {
     /* 车速 */
     uint16_t speed;
     
-    /* 电机数据 */
-    uint16_t rpm_left;
-    uint16_t rpm_right;
+    /* 电机数据（目标值：VCU→MCU） */
+    int16_t rpm_target_left;
+    int16_t rpm_target_right;
+    int16_t torque_target_left;
+    int16_t torque_target_right;
+
+    /* 电机数据（实际值：MCU→VCU） */
+    int16_t rpm_left;
+    int16_t rpm_right;
     int16_t torque_left;
     int16_t torque_right;
     uint8_t temp_motor_left;
@@ -41,24 +47,57 @@ typedef struct {
     uint8_t throttle;
     uint8_t steering_angle;
     uint8_t car_travel;     /* 行驶里程 */
-    
+
+    /* VCU→MCU控制指令 */
+    uint8_t l_target_controlmodeorder;
+    uint8_t l_gearstage;
+    uint8_t r_target_controlmodeorder;
+    uint8_t r_gearstage;
+    float dccur;            /* 直流母线电压 */
+
+    /* MCU→VCU状态 */
+    uint8_t l_controlmodeorder;
+    uint8_t r_controlmodeorder;
+    uint8_t l_mcu_ready;
+    uint8_t l_mcu_precharge_state;
+    uint8_t l_mcu_wrong_code;
+    uint8_t l_mcu_selftest_state;
+    uint8_t l_mcu_alert;
+    uint8_t r_mcu_ready;
+    uint8_t r_mcu_precharge_state;
+    uint8_t r_mcu_wrong_code;
+    uint8_t r_mcu_selftest_state;
+    uint8_t r_mcu_alert;
+
+    /* MCU电气参数 */
+    float lmcu_dcvol;
+    float lmcu_dccur;
+    float lmcu_accur;
+    float rmcu_dcvol;
+    float rmcu_dccur;
+    float rmcu_accur;
+
     /* 加速度 */
     int16_t accel_x;
     int16_t accel_y;
     int16_t accel_z;
     int16_t yaw_rate;
-    
+
     /* 姿态角 */
     float roll;
     float pitch;
     float yaw;
-    
+
     /* 安全信号 */
-    uint8_t safety_loop;
-    uint8_t bms_fault;
-    uint8_t mcu_fault;
-    uint8_t precharge;
-    uint8_t self_check;
+    uint8_t imd_safe;
+    uint8_t bms_safe;
+    uint8_t emerg_stop;
+    uint8_t inertia_switch;
+    uint8_t brake_overtr_switch;
+    uint8_t hvd;
+    uint8_t lmcs;
+    uint8_t rmcs;
+    uint8_t bspd_safe;
     
     /* 输入状态 */
     uint8_t key_state;          /* 按键位掩码 */

@@ -74,5 +74,5 @@ void VehicleData_Reset(void)
     
     /* 默认值 */
     g_vehicleData.gear = GEAR_N;
-    g_vehicleData.safety_loop = 1;  /* 安全回路正常 */
+    g_vehicleData.imd_safe = 1;  /* 安全回路正常 */
 }

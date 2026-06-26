@@ -183,6 +183,24 @@ g_vehicleData.yaw = ((int16_t)(data[6] | data[7] << 8)) / 32768.0f * 180.0f;
 
 ---
 
+## 2026-06-24 CAN接收方式优化
+
+### BUG-014: CAN轮询方式可能丢帧
+
+**现象**：多个ECU同时发送CAN消息时，20ms轮询周期内FIFO可能溢出导致丢帧。
+
+**原因**：原实现使用轮询方式（`BSP_CAN1_Receive`），每20ms检查一次FIFO。VCU/MCU/BMS/IMU同时发数据时，FIFO深度仅64条，轮询延迟可能导致溢出。
+
+**修复**：改为中断回调方式：
+- 删除 `BSP_CAN1_Receive`/`BSP_CAN2_Receive` 轮询函数
+- 新增 `HAL_FDCAN_RxFifo0Callback` 中断回调（BSP层）
+- 新增 `BSP_CAN1_RxCallback`/`BSP_CAN2_RxCallback` 回调实现（APP层）
+- 删除 `APP_CAN_Process` 轮询函数
+
+**文件**：`BSP/bsp_can.h`、`BSP/bsp_can.c`、`APP/app_can.h`、`APP/app_can.c`
+
+---
+
 ## 待修复
 
 | 编号 | 问题 | 文件 | 状态 |

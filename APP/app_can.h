@@ -12,7 +12,6 @@
 extern "C" {
 #endif
 
-#include "stm32h7xx_hal.h"
 #include "Variable.h"
 
 /* Exported defines ----------------------------------------------------------*/
@@ -36,7 +35,7 @@ extern "C" {
 
 /* Exported functions --------------------------------------------------------*/
 void APP_CAN_Init(void);
-void APP_CAN_Process(void);
+void APP_CAN_TaskProcess(void);
 void APP_CAN_Decode(uint32_t id, uint8_t *data);
 void APP_CAN_DecodePower(uint32_t id, uint8_t *data);
 void APP_CAN_SendKeyState(uint8_t keyState);

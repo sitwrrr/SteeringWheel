@@ -50,7 +50,7 @@ static void jsonPackElectric(void)
         sprintf(json, "{1,%d,%d,%d,%d,%d,%f,%d,%d,%f,%f,%f,%f,%d,%d}",
                 g_vehicleData.speed,
                 g_vehicleData.throttle,
-                g_vehicleData.bms_fault,
+                g_vehicleData.bms_safe,
                 g_vehicleData.rpm_left,
                 g_vehicleData.rpm_right,
                 (float)g_vehicleData.current / 10.0f,
