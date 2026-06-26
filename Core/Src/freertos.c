@@ -28,6 +28,8 @@
 #include "app_can.h"
 #include "app_ec200.h"
 #include "Variable.h"
+#include "lvgl.h"
+#include "iwdg.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -226,10 +228,25 @@ void lvgl_task(void *argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN lvgl_task */
-  /* Infinite loop */
+  (void)argument;
+
+  /* 初始化LVGL */
+  // extern void ui_init(void);
+  // ui_init();
+
   for(;;)
   {
-    osDelay(1);
+    /* 获取LVGL互斥锁，保护lv_timer_handler */
+    osMutexAcquire(g_lvglMutex, osWaitForever);
+
+    lv_timer_handler();
+
+    osMutexRelease(g_lvglMutex);
+
+    /* 喂狗 */
+    HAL_IWDG_Refresh(&hiwdg1);
+
+    osDelay(5);
   }
   /* USER CODE END lvgl_task */
 }

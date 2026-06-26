@@ -15,6 +15,7 @@ VehicleData_t g_vehicleData;
 WorkMode_t g_workMode;
 
 osMutexId_t g_dataMutex;
+osMutexId_t g_lvglMutex;
 osEventFlagsId_t canEventHandle;
 
 /* CAN接收标志 */
@@ -42,6 +43,7 @@ void Variable_Init(void)
 {
     /* 创建互斥锁（CMSIS-RTOS V2） */
     g_dataMutex = osMutexNew(NULL);
+    g_lvglMutex = osMutexNew(NULL);
     
     /* 创建事件标志（CMSIS-RTOS V2） */
     canEventHandle = osEventFlagsNew(NULL);

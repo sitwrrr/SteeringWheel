@@ -130,6 +130,7 @@ typedef enum {
 extern VehicleData_t g_vehicleData;
 extern WorkMode_t g_workMode;
 extern osMutexId_t g_dataMutex;
+extern osMutexId_t g_lvglMutex;
 extern osEventFlagsId_t canEventHandle;
 
 /* CAN接收标志 */
