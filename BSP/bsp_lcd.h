@@ -19,7 +19,7 @@ extern "C" {
 #define LCD_FMC_AX          19
 
 #define LCD_WIDTH           480
-#define LCD_HEIGHT          320
+#define LCD_HEIGHT          272
 
 /* Exported types ------------------------------------------------------------*/
 typedef struct {
