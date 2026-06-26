@@ -13,11 +13,11 @@ extern "C" {
 #endif
 
 #include "stm32h7xx_hal.h"
-#include "fdcan.h"
 
 /* Exported types ------------------------------------------------------------*/
 typedef struct {
     uint32_t id;
+    uint8_t channel;  /* 1=FDCAN1, 2=FDCAN2 */
     uint8_t data[8];
 } CAN_Message_t;
 
