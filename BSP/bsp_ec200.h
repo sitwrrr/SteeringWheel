@@ -22,7 +22,7 @@ extern "C" {
 /* Exported functions --------------------------------------------------------*/
 uint8_t BSP_EC200_Init(void);
 void BSP_EC200_SendAT(const char *cmd);
-uint8_t BSP_EC200_WaitResponse(char *response, uint16_t len, uint32_t timeout);
+uint8_t BSP_EC200_WaitResponse(char *response, uint32_t timeout);
 void BSP_EC200_Process(void);
 uint8_t BSP_EC200_IsMQTTReady(void);
 uint8_t BSP_EC200_IsReady(void);

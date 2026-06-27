@@ -17,7 +17,6 @@
 /* Private variables --------------------------------------------------------*/
 static uint8_t rxBuffer[EC200_RX_BUFFER_SIZE];
 static uint16_t rxIndex = 0;
-static uint8_t rxFlag = 0;
 static uint8_t readyFlag = 0;
 static uint8_t mqttOpenFlag = 0;
 static uint8_t mqttConnFlag = 0;
@@ -121,7 +120,7 @@ void BSP_EC200_SendAT(const char *cmd)
 /**
  * @brief 等待响应（外部接口）
  */
-uint8_t BSP_EC200_WaitResponse(char *response, uint16_t len, uint32_t timeout)
+uint8_t BSP_EC200_WaitResponse(char *response, uint32_t timeout)
 {
     return EC200_WaitResponse(response, timeout);
 }
