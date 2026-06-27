@@ -13,12 +13,13 @@
 #include <stdio.h>
 
 /* Private defines ----------------------------------------------------------*/
-#define MQTT_SERVER     "123.57.107.238"
-#define MQTT_PORT       1883
-#define MQTT_CLIENT_ID  "hello"
-#define MQTT_USERNAME   "Rain"
-#define MQTT_PASSWORD   "20031010"
-#define MQTT_TOPIC      "mqtt"
+/* MQTT连接配置 - 修改以下参数连接到你的MQTT服务器 */
+#define MQTT_SERVER     "123.57.107.238"  /* MQTT服务器IP地址 */
+#define MQTT_PORT       1883              /* MQTT端口号（默认1883） */
+#define MQTT_CLIENT_ID  "hello"           /* 客户端ID（需唯一） */
+#define MQTT_USERNAME   "Rain"            /* MQTT用户名 */
+#define MQTT_PASSWORD   "20031010"        /* MQTT密码 */
+#define MQTT_TOPIC      "mqtt"            /* 发布Topic */
 
 /* Private variables --------------------------------------------------------*/
 static uint8_t mqttConnected = 0;
@@ -136,25 +137,54 @@ uint8_t APP_EC200_Init(void)
     }
     printf("EC200 Ready\r\n");
     
+    /* 清除MQTT标志 */
+    BSP_EC200_ClearMQTTFlags();
+    
     /* MQTT服务器连接 */
     char cmd[128];
     sprintf(cmd, "AT+QMTOPEN=0,\"%s\",%d", MQTT_SERVER, MQTT_PORT);
     BSP_EC200_SendAT(cmd);
     
-    /* 等待连接成功 */
-    HAL_Delay(2000);
+    /* 等待连接成功（带超时） */
+    printf("Waiting for MQTT Open...\r\n");
+    uint32_t timeout = 0;
+    while (!BSP_EC200_GetMQTTOpenFlag() && timeout < 50)
+    {
+        HAL_Delay(200);
+        timeout++;
+    }
+    if (timeout >= 50)
+    {
+        printf("MQTT Open timeout!\r\n");
+        return 0;
+    }
+    printf("MQTT Open OK\r\n");
+    
+    HAL_Delay(500);
     
     /* MQTT客户端连接 */
     sprintf(cmd, "AT+QMTCONN=0,\"%s\",\"%s\",\"%s\"", 
             MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD);
     BSP_EC200_SendAT(cmd);
     
-    HAL_Delay(1000);
+    /* 等待连接成功（带超时） */
+    printf("Waiting for MQTT Connect...\r\n");
+    timeout = 0;
+    while (!BSP_EC200_GetMQTTConnFlag() && timeout < 50)
+    {
+        HAL_Delay(200);
+        timeout++;
+    }
+    if (timeout >= 50)
+    {
+        printf("MQTT Connect timeout!\r\n");
+        return 0;
+    }
+    printf("MQTT Connected\r\n");
     
     mqttConnected = 1;
     g_mqttConnected = 1;
     
-    printf("MQTT Connected\r\n");
     return 1;
 }
 

@@ -33,6 +33,7 @@ static void EC200_SendAT(const char *cmd)
     char buf[256];
     sprintf(buf, "%s\r\n", cmd);
     HAL_UART_Transmit(&huart3, (uint8_t *)buf, strlen(buf), HAL_MAX_DELAY);
+    printf("[EC200 TX] %s\r\n", cmd);
 }
 
 /**
@@ -149,6 +150,32 @@ uint8_t BSP_EC200_IsReady(void)
     return readyFlag;
 }
 
+/**
+ * @brief 获取MQTT Open标志
+ */
+uint8_t BSP_EC200_GetMQTTOpenFlag(void)
+{
+    return mqttOpenFlag;
+}
+
+/**
+ * @brief 获取MQTT Connect标志
+ */
+uint8_t BSP_EC200_GetMQTTConnFlag(void)
+{
+    return mqttConnFlag;
+}
+
+/**
+ * @brief 清除MQTT标志
+ */
+void BSP_EC200_ClearMQTTFlags(void)
+{
+    mqttOpenFlag = 0;
+    mqttConnFlag = 0;
+    mqttPubFlag = 0;
+}
+
 /* UART接收回调 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -165,6 +192,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         /* 检查是否收到完整响应 */
         if (rxIndex >= 2 && rxBuffer[rxIndex - 2] == 0x0D && rxBuffer[rxIndex - 1] == 0x0A)
         {
+            rxBuffer[rxIndex] = '\0';
+            printf("[EC200 RX] %s", rxBuffer);
+
             /* 检查特定响应 */
             if (strstr((char *)rxBuffer, "RDY") != NULL)
             {
