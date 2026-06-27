@@ -30,6 +30,7 @@
 /*
  * DMA缓冲区：前RESET_PULSE个为复位信号（0），后面是LED数据
  * 每个元素是uint16_t，对应定时器的一个PWM周期
+ * .bss默认放RAM(0x24000000=D1区)，DMA1/DMA2可直接访问
  */
 static uint16_t rgbBuffer[RESET_PULSE + WS2812B_MAX_LED_NUM * LED_DATA_LEN];
 

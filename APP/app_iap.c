@@ -49,19 +49,34 @@ static HAL_StatusTypeDef flashErase(uint32_t sector)
 }
 
 /**
- * @brief 写入Flash（256位对齐）
+ * @brief 写入Flash（256位对齐）+ 写入校验重试
+ *        STM32H7的FLASH_TYPEPROGRAM_FLASHWORD要求32字节对齐
+ *        data必须是32字节对齐的缓冲区，len必须是32的倍数
  */
-static HAL_StatusTypeDef flashWrite(uint32_t addr, uint64_t *data, uint32_t len)
+static HAL_StatusTypeDef flashWrite(uint32_t addr, uint8_t *data, uint32_t len)
 {
     HAL_StatusTypeDef status = HAL_OK;
     
-    for (uint32_t i = 0; i < len / 8; i++)
+    for (uint32_t i = 0; i < len; i += 32)
     {
-        status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_FLASHWORD, addr + i * 8, data[i]);
-        if (status != HAL_OK) break;
+        uint32_t retry = 0;
+        while (retry < IAP_WRITE_RETRY)
+        {
+            status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_FLASHWORD, addr + i, (uint64_t)(uint32_t)(data + i));
+            if (status == HAL_OK)
+            {
+                /* 写入校验：回读比较 */
+                if (memcmp((void *)(addr + i), data + i, 32) == 0)
+                {
+                    break;  /* 校验通过 */
+                }
+            }
+            retry++;
+        }
+        if (retry >= IAP_WRITE_RETRY) return HAL_ERROR;
     }
     
-    return status;
+    return HAL_OK;
 }
 
 /* Exported functions --------------------------------------------------------*/
@@ -89,6 +104,8 @@ void APP_IAP_Process(void)
 /**
  * @brief 开始IAP升级
  * @param size: 固件大小
+ * @warning 擦除Sector 0(当前运行代码区)，传输失败将变砖(仅JTAG恢复)
+ *          已加重试+回读校验降低风险，建议后续改为双bank方案
  */
 void APP_IAP_Start(uint32_t size)
 {
@@ -128,7 +145,7 @@ void APP_IAP_WriteData(uint8_t *data, uint32_t len)
                 iapBuffer[iapBufferIndex++] = 0xFF;
             }
             
-            flashWrite(flashWriteAddr, (uint64_t *)iapBuffer, iapBufferIndex);
+            flashWrite(flashWriteAddr, iapBuffer, iapBufferIndex);
             flashWriteAddr += iapBufferIndex;
             iapBufferIndex = 0;
         }
@@ -154,7 +171,7 @@ void APP_IAP_Finish(void)
         {
             iapBuffer[iapBufferIndex++] = 0xFF;
         }
-        flashWrite(flashWriteAddr, (uint64_t *)iapBuffer, iapBufferIndex);
+        flashWrite(flashWriteAddr, iapBuffer, iapBufferIndex);
     }
     
     /* 锁定Flash */
@@ -166,7 +183,7 @@ void APP_IAP_Finish(void)
 /**
  * @brief 跳转到BootLoader
  */
-void APP_IAP_JumpToBootLoader(void)
+void APP_IAP_JumpToBootloader(void)  /* SW-L10修复: 统一命名 */
 {
     typedef void (*pFunction)(void);
     pFunction jumpToApplication;

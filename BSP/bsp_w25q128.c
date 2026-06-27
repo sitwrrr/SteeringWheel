@@ -12,6 +12,7 @@
 
 #include "bsp_w25q128.h"
 #include "spi.h"
+#include "cmsis_os2.h"
 #include <string.h>
 
 /* Private defines ----------------------------------------------------------*/
@@ -31,6 +32,7 @@ static SPI_HandleTypeDef *hspi = &hspi1;
 
 /* 扇区读写缓冲区（用于读-改-写操作） */
 static uint8_t sectorBuf[W25Q128_SECTOR_SIZE];
+static osMutexId_t w25q128Mutex = NULL;  /* 保护sectorBuf的互斥锁 */
 
 /* Private function prototypes -----------------------------------------------*/
 static void BSP_W25Q128_WritePage(uint32_t addr, uint8_t *data, uint16_t len);
@@ -237,6 +239,7 @@ void BSP_W25Q128_Init(void)
 {
     CS_HIGH();
     HAL_Delay(100);
+    w25q128Mutex = osMutexNew(NULL);
 }
 
 /**
@@ -319,6 +322,8 @@ static void BSP_W25Q128_WritePage(uint32_t addr, uint8_t *data, uint16_t len)
  */
 void BSP_W25Q128_Write(uint32_t addr, uint8_t *data, uint32_t len)
 {
+    osMutexAcquire(w25q128Mutex, osWaitForever);
+
     uint16_t sectorRemain = W25Q128_SECTOR_SIZE - (addr % W25Q128_SECTOR_SIZE);
 
     if (len <= sectorRemain)
@@ -347,6 +352,8 @@ void BSP_W25Q128_Write(uint32_t addr, uint8_t *data, uint32_t len)
     {
         W25Q128_AutoWriteSector(data, addr, len);
     }
+
+    osMutexRelease(w25q128Mutex);
 }
 
 /**

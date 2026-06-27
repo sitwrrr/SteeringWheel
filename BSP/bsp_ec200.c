@@ -11,12 +11,12 @@
 #include <stdio.h>
 
 /* Private defines ----------------------------------------------------------*/
-#define EC200_RX_BUFFER_SIZE    512
 #define EC200_TIMEOUT           5000
 
 /* Private variables --------------------------------------------------------*/
 static uint8_t rxBuffer[EC200_RX_BUFFER_SIZE];
 static uint16_t rxIndex = 0;
+static uint8_t rxByte;  /* SW-C1修复: 单独的接收字节变量，避免rxBuffer[0]被覆盖 */
 static uint8_t readyFlag = 0;
 static uint8_t mqttOpenFlag = 0;
 static uint8_t mqttConnFlag = 0;
@@ -30,9 +30,9 @@ static uint8_t mqttPubFlag = 0;
 static void EC200_SendAT(const char *cmd)
 {
     char buf[256];
-    sprintf(buf, "%s\r\n", cmd);
+    snprintf(buf, sizeof(buf), "%s\r\n", cmd);
     HAL_UART_Transmit(&huart3, (uint8_t *)buf, strlen(buf), HAL_MAX_DELAY);
-    printf("[EC200 TX] %s\r\n", cmd);  /* 将发送的AT命令打印到串口1，方便调试 */
+    printf("[EC200 TX] %s\r\n", cmd);
 }
 
 /**
@@ -72,7 +72,7 @@ uint8_t BSP_EC200_Init(void)
     HAL_GPIO_WritePin(RST_4G_GPIO_Port, RST_4G_Pin, GPIO_PIN_RESET);
     
     /* 启动串口接收 */
-    HAL_UART_Receive_IT(&huart3, rxBuffer, 1);
+    HAL_UART_Receive_IT(&huart3, &rxByte, 1);  /* SW-C1修复: 接收到单独变量 */
     
     /* 等待模块就绪 */
     if (!EC200_WaitResponse("RDY", EC200_TIMEOUT))
@@ -120,7 +120,7 @@ void BSP_EC200_SendAT(const char *cmd)
 /**
  * @brief 等待响应（外部接口）
  */
-uint8_t BSP_EC200_WaitResponse(char *response, uint32_t timeout)
+uint8_t BSP_EC200_WaitResponse(const char *response, uint32_t timeout)
 {
     return EC200_WaitResponse(response, timeout);
 }
@@ -175,10 +175,10 @@ void BSP_EC200_ClearMQTTFlags(void)
     mqttPubFlag = 0;
 }
 
-/* UART接收回调 */
+/* UART接收回调（SW-M9: 仅处理USART3/EC200，其他UART需独立回调） */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    if (huart->Instance == USART3)
+    if (huart->Instance == USART3)  /* EC200 4G模块 */
     {
         if (rxIndex >= EC200_RX_BUFFER_SIZE - 1)
         {
@@ -186,7 +186,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
             memset(rxBuffer, 0, EC200_RX_BUFFER_SIZE);
         }
         
-        rxBuffer[rxIndex++] = rxBuffer[0];
+        rxBuffer[rxIndex++] = rxByte;  /* SW-C1修复: 从单独变量复制 */
         
         /* 检查是否收到完整响应 */
         if (rxIndex >= 2 && rxBuffer[rxIndex - 2] == 0x0D && rxBuffer[rxIndex - 1] == 0x0A)
@@ -199,15 +199,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
             {
                 readyFlag = 1;
             }
-            else if (strstr((char *)rxBuffer, "OPEN") != NULL)
+            else if (strstr((char *)rxBuffer, "+QMTOPEN: 0,0") != NULL)  /* SW-M6修复: 完整匹配 */
             {
                 mqttOpenFlag = 1;
             }
-            else if (strstr((char *)rxBuffer, "CONN") != NULL)
+            else if (strstr((char *)rxBuffer, "+QMTCONN: 0,0") != NULL)  /* SW-M6修复: 完整匹配 */
             {
                 mqttConnFlag = 1;
             }
-            else if (strstr((char *)rxBuffer, "PUBEX") != NULL)
+            else if (strstr((char *)rxBuffer, "+QMTPUBEX:") != NULL)
             {
                 mqttPubFlag = 1;
             }
@@ -224,6 +224,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         }
         
         /* 继续接收 */
-        HAL_UART_Receive_IT(&huart3, rxBuffer, 1);
+        HAL_UART_Receive_IT(&huart3, &rxByte, 1);  /* SW-C1修复 */
     }
 }

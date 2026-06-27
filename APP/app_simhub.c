@@ -8,6 +8,7 @@
 #include "app_simhub.h"
 #include "bsp_usb.h"
 #include "Variable.h"
+#include "cmsis_os2.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -23,15 +24,17 @@ static char cLapTimeBuf[16];  /* 当前圈时缓存 */
 
 /**
  * @brief 简单JSON解析（提取整数值）
+ *        SW-L3修复: 用"key":模式匹配，避免子串误匹配
  */
 static int json_get_int(const char *json, const char *key)
 {
-    char *pos = strstr(json, key);
+    char pattern[64];
+    snprintf(pattern, sizeof(pattern), "\"%s\":", key);  /* 构造 "key": 模式 */
+    
+    char *pos = strstr(json, pattern);
     if (pos == NULL) return 0;
     
-    pos = strchr(pos, ':');
-    if (pos == NULL) return 0;
-    pos++;
+    pos += strlen(pattern);
     
     while (*pos == ' ') pos++;
     
@@ -40,15 +43,17 @@ static int json_get_int(const char *json, const char *key)
 
 /**
  * @brief 简单JSON解析（提取字符串值）
+ *        SW-L3修复: 用"key":模式匹配，避免子串误匹配
  */
 static const char *json_get_string(const char *json, const char *key, char *buf, int bufSize)
 {
-    char *pos = strstr(json, key);
+    char pattern[64];
+    snprintf(pattern, sizeof(pattern), "\"%s\":", key);  /* 构造 "key": 模式 */
+    
+    char *pos = strstr(json, pattern);
     if (pos == NULL) return NULL;
     
-    pos = strchr(pos, ':');
-    if (pos == NULL) return NULL;
-    pos++;
+    pos += strlen(pattern);
     
     while (*pos == ' ') pos++;
     if (*pos != '"') return NULL;
@@ -102,6 +107,8 @@ void APP_SimHub_ReceiveData(uint8_t *data, uint16_t len)
     {
         if (data[i] == '{')
         {
+            /* SW-L4修复: 上一帧未处理完，丢弃新帧 */
+            if (simhubReady) continue;
             simhubIndex = 0;
             simhubBuffer[simhubIndex++] = data[i];
         }
@@ -172,6 +179,7 @@ void APP_SimHub_ParseJSON(const char *json)
  */
 void APP_SimHub_UpdateVehicleData(void)
 {
+    osMutexAcquire(g_dataMutex, osWaitForever);
     g_vehicleData.speed = simhubData.speed;
     g_vehicleData.rpm_left = simhubData.rpm;
     g_vehicleData.rpm_right = simhubData.rpm;
@@ -180,6 +188,7 @@ void APP_SimHub_UpdateVehicleData(void)
     g_vehicleData.brake = simhubData.brake;
     g_vehicleData.soc = simhubData.fuel;
     g_vehicleData.timestamp = HAL_GetTick();
+    osMutexRelease(g_dataMutex);
     
     APP_SimHub_DataReceivedCallback(&g_vehicleData);
 }
@@ -190,4 +199,13 @@ void APP_SimHub_UpdateVehicleData(void)
 __weak void APP_SimHub_DataReceivedCallback(VehicleData_t *data)
 {
     (void)data;
+}
+
+/**
+ * @brief 获取红线转速
+ * @return 红线RPM（默认8000）
+ */
+uint16_t APP_SimHub_GetRedLineRPM(void)
+{
+    return simhubData.redLineRPM > 0 ? simhubData.redLineRPM : 8000;
 }

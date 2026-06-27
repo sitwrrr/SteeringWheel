@@ -18,6 +18,7 @@
  */
 
 #include "app_ws2812b.h"
+#include "app_simhub.h"  /* SW-L6修复: 获取红线转速 */
 #include "bsp_ws2812b.h"
 
 /* Private variables ---------------------------------------------------------*/
@@ -158,7 +159,8 @@ void APP_WS2812B_Update(uint16_t rpm, WorkMode_t mode)
         /* ===== RPM转速指示模式 ===== */
         case WS2812B_MODE_RPM:
         {
-            uint8_t ledCount = calcRpmLedCount(rpm, 8000);  /* 红线8000rpm */
+            uint16_t redLine = APP_SimHub_GetRedLineRPM();  /* SW-L6修复: 从SimHub获取红线转速 */
+            uint8_t ledCount = calcRpmLedCount(rpm, redLine);
 
             /* 超转速闪烁警告：RPM达到红线时闪烁 */
             if (ledCount >= WS2812B_LED_COUNT)

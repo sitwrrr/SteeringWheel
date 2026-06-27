@@ -58,13 +58,16 @@ void BSP_USB_SendData(uint8_t *data, uint16_t len)
 void BSP_USB_Printf(const char *format, ...)
 {
     va_list args;
-    uint32_t length;
+    int length;
     
     va_start(args, format);
     length = vsnprintf((char *)txBuffer, USB_TX_BUFFER_SIZE, format, args);
     va_end(args);
     
-    CDC_Transmit_FS(txBuffer, length);
+    if (length > 0)
+    {
+        CDC_Transmit_FS(txBuffer, (uint16_t)length);
+    }
 }
 
 /**
@@ -78,9 +81,9 @@ uint8_t BSP_USB_IsConnected(void)
 
 /**
  * @brief USB HID发送按键报告
- * @param buttons: 按键位掩码（bit0-bit9对应10个按键）
+ * @param buttons: 按键位掩码（bit0-bit15对应16个按键）
  */
-void BSP_USB_SendHIDReport(uint8_t buttons)
+void BSP_USB_SendHIDReport(uint16_t buttons)  /* SW-L2修复: 改为uint16_t */
 {
     joyStick_HID.button_group0 = buttons & 0xFF;
     joyStick_HID.button_group1 = (buttons >> 8) & 0xFF;

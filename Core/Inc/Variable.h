@@ -45,7 +45,7 @@ typedef struct {
     uint8_t gear;           /* 0:N, 1:AC, 2:SK, 3:AU, 4:EF */
     uint8_t brake;
     uint8_t throttle;
-    uint8_t steering_angle;
+    int8_t steering_angle;  /* SW-H2修复: 改为int8_t，支持负值 */
     uint8_t car_travel;     /* 行驶里程 */
 
     /* VCU→MCU控制指令 */

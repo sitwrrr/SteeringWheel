@@ -16,9 +16,10 @@ extern "C" {
 
 /* Exported defines ----------------------------------------------------------*/
 #define IAP_BOOTLOADER_ADDR     0x1FF09800  /* System BootLoader地址 */
-#define IAP_APP_ADDR            0x08000000  /* 应用程序起始地址 */
+#define IAP_APP_ADDR            0x08000000  /* 应用程序起始地址（Sector 0） */
 #define IAP_FLASH_SECTOR        FLASH_SECTOR_0
 #define IAP_BUFFER_SIZE         1024
+#define IAP_WRITE_RETRY         3           /* 写入重试次数 */
 
 /* Exported types ------------------------------------------------------------*/
 typedef enum {
@@ -41,7 +42,7 @@ void APP_IAP_Process(void);
 void APP_IAP_Start(uint32_t size);
 void APP_IAP_WriteData(uint8_t *data, uint32_t len);
 void APP_IAP_Finish(void);
-void APP_IAP_JumpToBootloader(void);
+void APP_IAP_JumpToBootloader(void);  /* SW-L10修复: 统一命名 */
 IAP_State_t APP_IAP_GetState(void);
 IAP_Info_t APP_IAP_GetInfo(void);
 

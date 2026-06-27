@@ -50,6 +50,10 @@ static const InputHandler_t keyHandlers[KEY_COUNT] = {
     key8_handler
 };
 
+/* Private variables ---------------------------------------------------------*/
+static uint8_t lastShiftUp = 0;   /* SW-M5修复: 上次拨片状态，用于边沿检测 */
+static uint8_t lastShiftDown = 0;
+
 /* Private functions ---------------------------------------------------------*/
 
 /* KEY1: 显示模式切换（通过key_clicked通知LVGL任务） */
@@ -159,14 +163,21 @@ void APP_Input_Scan(void)
         }
     }
 
-    /* 4. 更新换挡拨片状态 */
-    g_vehicleData.shift_up = BSP_Input_IsPressed(SHIFT_UP);
-    g_vehicleData.shift_down = BSP_Input_IsPressed(SHIFT_DOWN);
+    /* 4. 更新换挡拨片状态（上升沿检测，避免持续触发） */
+    uint8_t curShiftUp = BSP_Input_IsPressed(SHIFT_UP);
+    uint8_t curShiftDown = BSP_Input_IsPressed(SHIFT_DOWN);
+    g_vehicleData.shift_up = curShiftUp;
+    g_vehicleData.shift_down = curShiftDown;
 
-    /* 有拨片输入时调用换挡回调 */
-    if (g_vehicleData.shift_up || g_vehicleData.shift_down)
+    /* 只在0→1跳变时触发换挡回调（按住不重复触发） */
+    uint8_t risingUp = curShiftUp && !lastShiftUp;
+    uint8_t risingDown = curShiftDown && !lastShiftDown;
+    lastShiftUp = curShiftUp;
+    lastShiftDown = curShiftDown;
+
+    if (risingUp || risingDown)
     {
-        APP_Input_ShiftCallback(g_vehicleData.shift_up, g_vehicleData.shift_down);
+        APP_Input_ShiftCallback(risingUp, risingDown);
     }
 }
 

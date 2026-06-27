@@ -26,7 +26,7 @@ void BSP_USB_Init(void);
 void BSP_USB_SendData(uint8_t *data, uint16_t len);
 void BSP_USB_Printf(const char *format, ...);
 uint8_t BSP_USB_IsConnected(void);
-void BSP_USB_SendHIDReport(uint8_t buttons);
+void BSP_USB_SendHIDReport(uint16_t buttons);  /* SW-L2修复: 改为uint16_t */
 void BSP_USB_SetConnected(uint8_t state);
 
 #ifdef __cplusplus

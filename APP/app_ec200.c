@@ -9,6 +9,7 @@
 #include "app_motec.h"
 #include "bsp_ec200.h"
 #include "Variable.h"
+#include "cmsis_os2.h"  /* SW-H5修复: 使用mutex */
 #include <string.h>
 #include <stdio.h>
 
@@ -32,9 +33,14 @@ static uint8_t mqttConnected = 0;
 static void MQTT_Publish(const char *data)
 {
     char cmd[256];
-    sprintf(cmd, "AT+QMTPUBEX=0,0,0,0,\"%s\",%d", MQTT_TOPIC, strlen(data));
+    snprintf(cmd, sizeof(cmd), "AT+QMTPUBEX=0,0,0,0,\"%s\",%d", MQTT_TOPIC, strlen(data));
     BSP_EC200_SendAT(cmd);
-    HAL_Delay(10);
+    /* SW-H4修复: 等待EC200返回'>'提示符后再发数据 */
+    if (!BSP_EC200_WaitResponse(">", 2000))
+    {
+        printf("MQTT > prompt timeout!\r\n");
+        return;
+    }
     BSP_EC200_SendAT(data);
 }
 
@@ -46,9 +52,10 @@ static void jsonPackElectric(void)
     static uint8_t changeFlag = 0;
     char json[300];
     
+    osMutexAcquire(g_dataMutex, osWaitForever);  /* SW-H5修复: 保护g_vehicleData */
     if (!changeFlag)
     {
-        sprintf(json, "{1,%d,%d,%d,%d,%d,%f,%d,%d,%f,%f,%f,%f,%d,%d}",
+        snprintf(json, sizeof(json), "{1,%d,%d,%d,%d,%d,%.1f,%d,%d,%.1f,%.1f,%.1f,%.1f,%d,%d}",
                 g_vehicleData.speed,
                 g_vehicleData.throttle,
                 g_vehicleData.bms_safe,
@@ -66,7 +73,7 @@ static void jsonPackElectric(void)
     }
     else
     {
-        sprintf(json, "{2,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%f,%f,%d,%d}",
+        snprintf(json, sizeof(json), "{2,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%.1f,%.1f,%d,%d}",
                 g_vehicleData.torque_left,
                 g_vehicleData.torque_right,
                 (int)g_vehicleData.current,
@@ -80,6 +87,7 @@ static void jsonPackElectric(void)
                 0.0f, 0.0f, 0, 0);
         changeFlag = 0;
     }
+    osMutexRelease(g_dataMutex);  /* SW-H5修复 */
     
     MQTT_Publish(json);
 }
@@ -91,17 +99,19 @@ static void jsonPackFuel(void)
 {
     char json[300];
     
-    sprintf(json, "{1,%d,%d,%d,%d,%d,%f,%d,%d,%f,%f,%f,%f,%d,%d}",
+    osMutexAcquire(g_dataMutex, osWaitForever);  /* SW-H5修复: 保护g_motecData */
+    snprintf(json, sizeof(json), "{1,%d,%d,%d,%d,%d,%.1f,%d,%d,%.1f,%.1f,%.1f,%.1f,%d,%d}",
             (int)g_motecData.frontSpeed,
             (int)g_motecData.throttlePosition,
-            0,  /* bms_fault */
+            0,
             (int)g_motecData.engineRPM,
-            0,  /* rpm_right */
+            0,
             0.0f,
             g_motecData.gear,
             g_motecData.gear,
             0.0f, 0.0f, 0.0f, 0.0f,
             0, 0);
+    osMutexRelease(g_dataMutex);  /* SW-H5修复 */
     
     MQTT_Publish(json);
 }
@@ -142,7 +152,7 @@ uint8_t APP_EC200_Init(void)
     
     /* MQTT服务器连接 */
     char cmd[128];
-    sprintf(cmd, "AT+QMTOPEN=0,\"%s\",%d", MQTT_SERVER, MQTT_PORT);
+    snprintf(cmd, sizeof(cmd), "AT+QMTOPEN=0,\"%s\",%d", MQTT_SERVER, MQTT_PORT);
     BSP_EC200_SendAT(cmd);
     
     /* 等待连接成功（带超时） */
@@ -163,7 +173,7 @@ uint8_t APP_EC200_Init(void)
     HAL_Delay(500);
     
     /* MQTT客户端连接 */
-    sprintf(cmd, "AT+QMTCONN=0,\"%s\",\"%s\",\"%s\"", 
+    snprintf(cmd, sizeof(cmd), "AT+QMTCONN=0,\"%s\",\"%s\",\"%s\"", 
             MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD);
     BSP_EC200_SendAT(cmd);
     
@@ -207,7 +217,7 @@ void APP_EC200_UploadData(VehicleData_t *data)
     if (!mqttConnected) return;
     
     char json[300];
-    sprintf(json, "{%d,%d,%d,%d,%d,%d,%d,%d}",
+    snprintf(json, sizeof(json), "{%d,%d,%d,%d,%d,%d,%d,%d}",
             data->speed,
             data->rpm_left,
             data->rpm_right,

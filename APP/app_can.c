@@ -57,6 +57,7 @@ void APP_CAN_TaskProcess(void)
  */
 void APP_CAN_Decode(uint32_t id, uint8_t *data)
 {
+    osMutexAcquire(g_dataMutex, osWaitForever);  /* SW-H5修复: 保护g_vehicleData */
     switch (id)
     {
         case 0x5F0:  /* MoTeC油车ECU 18帧数据 */
@@ -64,6 +65,7 @@ void APP_CAN_Decode(uint32_t id, uint8_t *data)
             break;
 
         case CAN_ID_VCU_SUMMARY:  /* 0x211 整车状态汇总 */
+            g_motecData.carType = 0;  /* 收到VCU数据，标记为电车 */
             g_vehicleData.speed = data[0];              /* [0] 前轮车速 */
             g_vehicleData.throttle = data[1];           /* [1] 油门踏板开度 */
             g_vehicleData.brake = data[2];              /* [2] 刹车踏板开度 */
@@ -78,27 +80,27 @@ void APP_CAN_Decode(uint32_t id, uint8_t *data)
             g_vehicleData.rmcs = (data[4] >> 7) & 0x01;        /* [4] bit7: 右MCU安全 */
             g_vehicleData.bspd_safe = data[5] & 0x01;          /* [5] bit0: BSPD制动安全 */
             g_vehicleData.gear = (data[5] >> 5) & 0x03;        /* [5] bit5-6: 挡位 */
-            g_vehicleData.steering_angle = data[6] - 90;       /* [6] 转向角 offset:-90 */
+            g_vehicleData.steering_angle = (int8_t)(data[6] - 90);  /* [6] 转向角 offset:-90, 范围±90° */
             break;
 
         case CAN_ID_VCU_TO_MCU1:  /* 0x08C1EF21 VCU→左MCU */
-            g_vehicleData.rpm_target_left = (data[0] + data[1] * 256) / 2 - 10000;  /* [0:1] 目标转速 */
-            g_vehicleData.torque_target_left = (data[2] + data[3] * 256);           /* [2:3] 目标转矩 */
-            g_vehicleData.l_target_controlmodeorder = data[4];                       /* [4] 控制模式 */
-            g_vehicleData.l_gearstage = data[5] & 0x03;                              /* [5] 挡位状态 */
-            g_vehicleData.dccur = (data[6] + data[7] * 256) * 0.1;                  /* [6:7] 直流母线电压 */
+            g_vehicleData.rpm_target_left = (int16_t)((data[0] + data[1] * 256) / 2 - 10000);  /* [0:1] 目标转速 */
+            g_vehicleData.torque_target_left = (int16_t)(data[2] | (data[3] << 8));             /* [2:3] 目标转矩 */
+            g_vehicleData.l_target_controlmodeorder = data[4];                                   /* [4] 控制模式 */
+            g_vehicleData.l_gearstage = data[5] & 0x03;                                          /* [5] 挡位状态 */
+            g_vehicleData.dccur = (data[6] + data[7] * 256) * 0.1;                              /* [6:7] 直流母线电压 */
             break;
 
         case CAN_ID_VCU_TO_MCU2:  /* 0x08B1EF21 VCU→右MCU */
-            g_vehicleData.rpm_target_right = (data[0] + data[1] * 256) / 2 - 10000; /* [0:1] 目标转速 */
-            g_vehicleData.torque_target_right = (data[2] + data[3] * 256);           /* [2:3] 目标转矩 */
-            g_vehicleData.r_target_controlmodeorder = data[4];                        /* [4] 控制模式 */
-            g_vehicleData.r_gearstage = data[5] & 0x03;                               /* [5] 挡位状态 */
+            g_vehicleData.rpm_target_right = (int16_t)((data[0] + data[1] * 256) / 2 - 10000); /* [0:1] 目标转速 */
+            g_vehicleData.torque_target_right = (int16_t)(data[2] | (data[3] << 8));            /* [2:3] 目标转矩 */
+            g_vehicleData.r_target_controlmodeorder = data[4];                                    /* [4] 控制模式 */
+            g_vehicleData.r_gearstage = data[5] & 0x03;                                           /* [5] 挡位状态 */
             break;
 
         case CAN_ID_MCU1_TO_VCU:  /* 0x0CFFC6EF 左MCU→VCU 状态 */
-            g_vehicleData.rpm_left = (data[0] + data[1] * 256) / 2 - 10000;  /* [0:1] 实际转速 */
-            g_vehicleData.torque_left = (data[2] + data[3] * 256);            /* [2:3] 实际转矩 */
+            g_vehicleData.rpm_left = (int16_t)((data[0] + data[1] * 256) / 2 - 10000);  /* [0:1] 实际转速 */
+            g_vehicleData.torque_left = (int16_t)(data[2] | (data[3] << 8));              /* [2:3] 实际转矩 */
             g_vehicleData.l_controlmodeorder = data[4];                        /* [4] 控制模式 */
             g_vehicleData.l_mcu_ready = data[5] & 0x01;                       /* [5] bit0: MCU就绪 */
             g_vehicleData.l_mcu_precharge_state = (data[5] >> 1) & 0x01;      /* [5] bit1: 预充状态 */
@@ -108,8 +110,8 @@ void APP_CAN_Decode(uint32_t id, uint8_t *data)
             break;
 
         case CAN_ID_MCU2_TO_VCU:  /* 0x0CB221EF 右MCU→VCU 状态 */
-            g_vehicleData.rpm_right = (data[0] + data[1] * 256) / 2 - 10000; /* [0:1] 实际转速 */
-            g_vehicleData.torque_right = (data[2] + data[3] * 256);           /* [2:3] 实际转矩 */
+            g_vehicleData.rpm_right = (int16_t)((data[0] + data[1] * 256) / 2 - 10000); /* [0:1] 实际转速 */
+            g_vehicleData.torque_right = (int16_t)(data[2] | (data[3] << 8));            /* [2:3] 实际转矩 */
             g_vehicleData.r_controlmodeorder = data[4];                        /* [4] 控制模式 */
             g_vehicleData.r_mcu_ready = data[5] & 0x01;                       /* [5] bit0: MCU就绪 */
             g_vehicleData.r_mcu_precharge_state = (data[5] >> 1) & 0x01;      /* [5] bit1: 预充状态 */
@@ -137,6 +139,7 @@ void APP_CAN_Decode(uint32_t id, uint8_t *data)
         default:
             break;
     }
+    osMutexRelease(g_dataMutex);  /* SW-H5修复 */
 }
 
 /**
@@ -144,6 +147,7 @@ void APP_CAN_Decode(uint32_t id, uint8_t *data)
  */
 void APP_CAN_DecodePower(uint32_t id, uint8_t *data)
 {
+    osMutexAcquire(g_dataMutex, osWaitForever);  /* SW-H5修复: 保护g_vehicleData */
     switch (id)
     {
         case CAN_ID_IMU:  /* 0x050 IMU惯性测量单元 */
@@ -151,9 +155,9 @@ void APP_CAN_DecodePower(uint32_t id, uint8_t *data)
             uint8_t sensor_diff = data[1];  /* [1] 数据类型标识 */
             if (sensor_diff == 0x51)        /* 加速度数据 */
             {
-                g_vehicleData.accel_x = ((int16_t)(data[2] | data[3] << 8)) / 32768.0f * 16.0f;  /* [2:3] X轴 ±16g */
-                g_vehicleData.accel_y = ((int16_t)(data[4] | data[5] << 8)) / 32768.0f * 16.0f;  /* [4:5] Y轴 ±16g */
-                g_vehicleData.accel_z = ((int16_t)(data[6] | data[7] << 8)) / 32768.0f * 16.0f;  /* [6:7] Z轴 ±16g */
+                g_vehicleData.accel_x = (int16_t)(((int16_t)(data[2] | data[3] << 8)) / 32768.0f * 1600.0f);  /* [2:3] X轴 单位0.01g */
+                g_vehicleData.accel_y = (int16_t)(((int16_t)(data[4] | data[5] << 8)) / 32768.0f * 1600.0f);  /* [4:5] Y轴 单位0.01g */
+                g_vehicleData.accel_z = (int16_t)(((int16_t)(data[6] | data[7] << 8)) / 32768.0f * 1600.0f);  /* [6:7] Z轴 单位0.01g */
             }
             else if (sensor_diff == 0x53)   /* 姿态角数据 */
             {
@@ -182,6 +186,7 @@ void APP_CAN_DecodePower(uint32_t id, uint8_t *data)
         default:
             break;
     }
+    osMutexRelease(g_dataMutex);  /* SW-H5修复 */
 }
 
 /**

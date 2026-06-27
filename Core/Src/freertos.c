@@ -27,9 +27,15 @@
 /* USER CODE BEGIN Includes */
 #include "app_can.h"
 #include "app_ec200.h"
+#include "app_input.h"
+#include "app_ws2812b.h"
+#include "app_simhub.h"
+#include "app_iap.h"
+#include "bsp_usb.h"
 #include "Variable.h"
 #include "lvgl.h"
 #include "iwdg.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -140,11 +146,26 @@ void vApplicationDaemonTaskStartupHook(void);
 /* USER CODE BEGIN 4 */
 void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
 {
-   /* Run time stack overflow checking is performed if
-   configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
-   called if a stack overflow is detected. */
+    (void)xTask;
+    printf("\r\n!!! STACK OVERFLOW in task: %s\r\n", pcTaskName);
+    for(;;);
 }
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN LONG_PRESS_CALLBACK */
+/**
+ * @brief 长按回调：长按KEY5跳转系统BootLoader（用于IAP升级）
+ */
+void APP_Input_LongPressCallback(KeyId_t id)
+{
+    if (id == KEY_5)
+    {
+        printf("\r\nLong press KEY5, jumping to bootloader...\r\n");
+        HAL_Delay(100);
+        APP_IAP_JumpToBootloader();
+    }
+}
+/* USER CODE END LONG_PRESS_CALLBACK */
 
 /* USER CODE BEGIN DAEMON_TASK_STARTUP_HOOK */
 void vApplicationDaemonTaskStartupHook(void)
@@ -261,10 +282,12 @@ void lvgl_task(void *argument)
 void lvgl_meter_task(void *argument)
 {
   /* USER CODE BEGIN lvgl_meter_task */
-  /* Infinite loop */
+  (void)argument;
   for(;;)
   {
-    osDelay(1);
+    /* 仪表盘UI更新（CAN数据→LVGL控件） */
+    /* TODO: 在实现UI界面后，在此处添加仪表数据刷新逻辑 */
+    osDelay(50);
   }
   /* USER CODE END lvgl_meter_task */
 }
@@ -301,11 +324,16 @@ void can_process_task(void *argument)
 void ec200_init_task(void *argument)
 {
   /* USER CODE BEGIN ec200_init_task */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+  (void)argument;
+
+  /* SW-M8修复: EC200初始化放在此任务，避免阻塞iot_upload_task */
+  APP_EC200_Init();
+
+  /* 初始化完成，通知iot_upload_task可以开始上传 */
+  osThreadFlagsSet(iot_uploadHandle, 0x02);
+
+  /* 初始化完成后自删除 */
+  osThreadTerminate(ec200_initHandle);
   /* USER CODE END ec200_init_task */
 }
 
@@ -318,8 +346,11 @@ void ec200_init_task(void *argument)
 void iot_upload_task(void *argument)
 {
   /* USER CODE BEGIN iot_upload_task */
-  APP_EC200_Init();
-  
+  (void)argument;
+
+  /* SW-M8修复: 等待ec200_init_task完成EC200初始化（flag 0x02） */
+  osThreadFlagsWait(0x02U, osFlagsWaitAny, osWaitForever);
+
   for(;;)
   {
     /* 等待CAN任务通知（有新数据） */
@@ -341,10 +372,13 @@ void iot_upload_task(void *argument)
 void ws2812b_task(void *argument)
 {
   /* USER CODE BEGIN ws2812b_task */
-  /* Infinite loop */
+  (void)argument;
+  APP_WS2812B_Init();
+
   for(;;)
   {
-    osDelay(1);
+    APP_WS2812B_Update(g_vehicleData.rpm_left, g_workMode);
+    osDelay(50);
   }
   /* USER CODE END ws2812b_task */
 }
@@ -359,10 +393,14 @@ void ws2812b_task(void *argument)
 void key_scan_task(void *argument)
 {
   /* USER CODE BEGIN key_scan_task */
-  /* Infinite loop */
+  (void)argument;
+  APP_Input_Init();
+
   for(;;)
   {
-    osDelay(1);
+    APP_Input_Scan();
+    APP_Input_SendCAN();
+    osDelay(20);
   }
   /* USER CODE END key_scan_task */
 }
@@ -377,10 +415,32 @@ void key_scan_task(void *argument)
 void usb_poll_task(void *argument)
 {
   /* USER CODE BEGIN usb_poll_task */
-  /* Infinite loop */
+  (void)argument;
+
   for(;;)
   {
-    osDelay(1);
+    /* 检查CDC接收（SimHub数据） */
+    uint16_t rxLen = g_usbRxLength;
+    if (rxLen > 0)
+    {
+      g_usbRxLength = 0;
+      APP_SimHub_ReceiveData(g_usbRxBuffer, rxLen);
+      APP_SimHub_Process();
+
+      /* 收到SimHub数据，自动切换到模拟器模式 */
+      if (g_workMode == MODE_STANDBY)
+      {
+        g_workMode = MODE_SIMULATOR;
+      }
+    }
+
+    /* 模拟器模式下发送HID按键报告 */
+    if (g_workMode == MODE_SIMULATOR)
+    {
+      BSP_USB_SendHIDReport((uint16_t)g_vehicleData.key_state);
+    }
+
+    osDelay(10);
   }
   /* USER CODE END usb_poll_task */
 }
@@ -395,10 +455,41 @@ void usb_poll_task(void *argument)
 void mode_detect_task(void *argument)
 {
   /* USER CODE BEGIN mode_detect_task */
-  /* Infinite loop */
+  (void)argument;
+  uint32_t lastCanTick = 0;
+  uint32_t lastSimHubTick = 0;
+
   for(;;)
   {
-    osDelay(1);
+    uint32_t now = HAL_GetTick();
+
+    /* CAN有数据更新（实车模式） */
+    if (g_vehicleData.timestamp != lastCanTick)
+    {
+      lastCanTick = g_vehicleData.timestamp;
+      if (g_workMode != MODE_SIMULATOR)
+      {
+        g_workMode = MODE_VEHICLE;
+      }
+    }
+
+    /* SimHub有数据更新（模拟器模式，由usb_poll_task设置） */
+    if (g_workMode == MODE_SIMULATOR)
+    {
+      lastSimHubTick = now;
+    }
+
+    /* 超过5秒无任何数据，回到待机 */
+    if (g_workMode == MODE_VEHICLE && (now - lastCanTick > 5000))
+    {
+      g_workMode = MODE_STANDBY;
+    }
+    if (g_workMode == MODE_SIMULATOR && (now - lastSimHubTick > 5000))
+    {
+      g_workMode = MODE_STANDBY;
+    }
+
+    osDelay(500);
   }
   /* USER CODE END mode_detect_task */
 }

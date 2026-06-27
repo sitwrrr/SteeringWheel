@@ -125,26 +125,30 @@ USBD_ClassTypeDef USBD_COMPOSITE = {
     USBD_COMPOSITE_GetFSCfgDesc,
     USBD_COMPOSITE_GetFSCfgDesc,
     USBD_COMPOSITE_GetFSCfgDesc,
-    USBD_COMPOSITE_DeviceQualifierDesc,
+    USBD_COMPOSITE_GetDeviceQualifierDesc,
 };
 
 /* ===== 初始化 ===== */
 static uint8_t USBD_COMPOSITE_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 {
-    /* CDC初始化：EP1 IN(0x81) + EP1 OUT(0x02) */
-    USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef *)pdev->pClassData;
-    if (hcdc != NULL) {
-        pdev->ep_in[0x81 & 0xFU].bInterval = 0;
-        USBD_LL_OpenEP(pdev, 0x81, USBD_EP_TYPE_INTR, 0x08);
-        pdev->ep_in[0x81 & 0xFU].is_used = 1U;
-        USBD_LL_OpenEP(pdev, 0x02, USBD_EP_TYPE_BULK, 0x40);
-        pdev->ep_out[0x02 & 0xFU].is_used = 1U;
-        USBD_LL_OpenEP(pdev, 0x83, USBD_EP_TYPE_BULK, 0x40);
-        pdev->ep_in[0x83 & 0xFU].is_used = 1U;
-        hcdc->TxState = 0;
-        hcdc->RxState = 0;
-        USBD_LL_PrepareReceive(pdev, 0x02, hcdc->RxBuffer, 0x40);
-    }
+    (void)cfgidx;
+    /* CDC初始化：分配CDC句柄内存 */
+    USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef *)USBD_malloc(sizeof(USBD_CDC_HandleTypeDef));
+    if (hcdc == NULL) return USBD_EMEM;
+    USBD_memset(hcdc, 0, sizeof(USBD_CDC_HandleTypeDef));
+    pdev->pClassData = hcdc;
+
+    /* CDC端点：EP1 IN(0x81)通知 + EP2 OUT(0x02)数据接收 + EP3 IN(0x83)数据发送 */
+    pdev->ep_in[0x81 & 0xFU].bInterval = 0;
+    USBD_LL_OpenEP(pdev, 0x81, USBD_EP_TYPE_INTR, 0x08);
+    pdev->ep_in[0x81 & 0xFU].is_used = 1U;
+    USBD_LL_OpenEP(pdev, 0x02, USBD_EP_TYPE_BULK, 0x40);
+    pdev->ep_out[0x02 & 0xFU].is_used = 1U;
+    USBD_LL_OpenEP(pdev, 0x83, USBD_EP_TYPE_BULK, 0x40);
+    pdev->ep_in[0x83 & 0xFU].is_used = 1U;
+    hcdc->TxState = 0;
+    hcdc->RxState = 0;
+    USBD_LL_PrepareReceive(pdev, 0x02, hcdc->RxBuffer, 0x40);
 
     /* HID初始化：EP2 IN(0x82) */
     hhid.state = HID_IDLE;
@@ -159,6 +163,7 @@ static uint8_t USBD_COMPOSITE_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 /* ===== 反初始化 ===== */
 static uint8_t USBD_COMPOSITE_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 {
+    (void)cfgidx;
     /* 关闭CDC端点 */
     USBD_LL_CloseEP(pdev, 0x81);
     pdev->ep_in[0x81 & 0xFU].is_used = 0U;
@@ -172,6 +177,7 @@ static uint8_t USBD_COMPOSITE_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
     pdev->ep_in[COMPOSITE_HID_EPIN & 0xFU].is_used = 0U;
 
     if (pdev->pClassData != NULL) {
+        USBD_free(pdev->pClassData);
         pdev->pClassData = NULL;
     }
     pdev->pClassData_HID_Mouse = NULL;
@@ -235,19 +241,11 @@ static uint8_t USBD_COMPOSITE_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTyped
 /* ===== 数据IN完成 ===== */
 static uint8_t USBD_COMPOSITE_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
 {
-    /* EP1 IN (0x81): CDC */
-    if ((epnum & 0x0F) == (0x81 & 0x0F)) {
+    /* EP1 IN (0x81) + EP3 IN (0x83): CDC */
+    if ((epnum & 0x0F) == (0x81 & 0x0F) || (epnum & 0x0F) == (0x83 & 0x0F)) {
         if (pdev->pClassData != NULL) {
             extern USBD_ClassTypeDef USBD_CDC;
             USBD_CDC.DataIn(pdev, epnum);
-        }
-    }
-
-    /* EP3 IN (0x83): CDC数据 */
-    if ((epnum & 0x0F) == (0x83 & 0x0F)) {
-        USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef *)pdev->pClassData;
-        if (hcdc != NULL) {
-            hcdc->TxState = 0;
         }
     }
 

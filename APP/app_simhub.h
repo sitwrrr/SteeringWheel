@@ -37,6 +37,8 @@ void APP_SimHub_Init(void);
 void APP_SimHub_Process(void);
 void APP_SimHub_ParseJSON(const char *json);
 void APP_SimHub_UpdateVehicleData(void);
+void APP_SimHub_ReceiveData(uint8_t *data, uint16_t len);
+uint16_t APP_SimHub_GetRedLineRPM(void);
 
 /* 回调函数 */
 void APP_SimHub_DataReceivedCallback(VehicleData_t *data);

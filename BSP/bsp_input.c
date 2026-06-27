@@ -93,6 +93,7 @@ void BSP_Input_Scan(void)
         InputState_t *s = &inputState[i];
 
         /* 消抖：本次读数与上次不同，更新lastState但不触发事件 */
+        /* SW-L8注释: 首次按键需两次扫描确认，延迟一个扫描周期(~20ms)，可接受 */
         if (currentState != s->lastState)
         {
             s->lastState = currentState;
