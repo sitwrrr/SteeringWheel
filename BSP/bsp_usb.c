@@ -8,6 +8,7 @@
 #include "bsp_usb.h"
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
+#include "usbd_composite.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -77,15 +78,15 @@ uint8_t BSP_USB_IsConnected(void)
 
 /**
  * @brief USB HID发送按键报告
- * @param buttons: 按键位掩码
+ * @param buttons: 按键位掩码（bit0-bit9对应10个按键）
  */
 void BSP_USB_SendHIDReport(uint8_t buttons)
 {
     joyStick_HID.button_group0 = buttons & 0xFF;
     joyStick_HID.button_group1 = (buttons >> 8) & 0xFF;
-    
-    /* TODO: HID类库未集成，暂不发送 */
-    // USBD_HID_SendReport(&hUsbDevice, (uint8_t *)&joyStick_HID, sizeof(joyStick_HID_t));
+
+    extern USBD_HandleTypeDef hUsbDeviceFS;
+    USBD_Composite_SendHIDReport(&hUsbDeviceFS, (uint8_t *)&joyStick_HID, sizeof(joyStick_HID_t));
 }
 
 /**

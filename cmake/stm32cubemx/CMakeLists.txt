@@ -16,6 +16,7 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Core/Inc
     ../../USB_DEVICE/App
     ../../USB_DEVICE/Target
+    ../../USB_DEVICE/Class/HID/Inc
     ../../Drivers/STM32H7xx_HAL_Driver/Inc
     ../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy
     ../../Middlewares/Third_Party/FreeRTOS/Source/include
@@ -90,6 +91,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c
     ../../Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c
     ../../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c
+    ../../USB_DEVICE/Class/HID/Src/usbd_composite.c
     ../../Core/Src/sysmem.c
     ../../Core/Src/syscalls.c
     ../../startup_stm32h743xx.s

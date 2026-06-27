@@ -380,6 +380,7 @@ typedef struct _USBD_HandleTypeDef
   USBD_DescriptorsTypeDef *pDesc;
   USBD_ClassTypeDef       *pClass[USBD_MAX_SUPPORTED_CLASS];
   void                    *pClassData;
+  void                    *pClassData_HID_Mouse;
   void                    *pClassDataCmsit[USBD_MAX_SUPPORTED_CLASS];
   void                    *pUserData[USBD_MAX_SUPPORTED_CLASS];
   void                    *pData;

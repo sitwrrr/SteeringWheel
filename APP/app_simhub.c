@@ -16,6 +16,8 @@ static SimHubData_t simhubData;
 static uint8_t simhubBuffer[SIMHUB_BUFFER_SIZE];
 static uint16_t simhubIndex = 0;
 static uint8_t simhubReady = 0;
+static char bLapTimeBuf[16];  /* 最佳圈时缓存（JSON缓冲区复用后保留） */
+static char cLapTimeBuf[16];  /* 当前圈时缓存 */
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -132,6 +134,7 @@ void APP_SimHub_ParseJSON(const char *json)
     simhubData.redLineRPM = json_get_int(json, "redLineRPM");
     simhubData.lap = json_get_int(json, "lap");
     
+    /* 解析挡位（字符串→整数） */
     const char *gearStr = json_get_string(json, "gear", buf, sizeof(buf));
     if (gearStr != NULL)
     {
@@ -143,6 +146,24 @@ void APP_SimHub_ParseJSON(const char *json)
         else if (strcmp(gearStr, "5") == 0) simhubData.gear = 5;
         else if (strcmp(gearStr, "6") == 0) simhubData.gear = 6;
         else simhubData.gear = 0;
+    }
+    
+    /* 解析最佳圈时（复制到静态缓冲区，避免JSON缓冲区复用后悬空指针） */
+    const char *blt = json_get_string(json, "bLapTime", buf, sizeof(buf));
+    if (blt != NULL)
+    {
+        strncpy(bLapTimeBuf, blt, sizeof(bLapTimeBuf) - 1);
+        bLapTimeBuf[sizeof(bLapTimeBuf) - 1] = '\0';
+        simhubData.bLapTime = bLapTimeBuf;
+    }
+    
+    /* 解析当前圈时 */
+    const char *clt = json_get_string(json, "cLapTime", buf, sizeof(buf));
+    if (clt != NULL)
+    {
+        strncpy(cLapTimeBuf, clt, sizeof(cLapTimeBuf) - 1);
+        cLapTimeBuf[sizeof(cLapTimeBuf) - 1] = '\0';
+        simhubData.cLapTime = cLapTimeBuf;
     }
 }
 
