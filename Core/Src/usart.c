@@ -249,6 +249,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
 #endif
 
+/* printf重定向到USART1（PA9/PA10调试串口），bsp_ec200.c的EC200收发调试输出依赖此函数 */
 PUTCHAR_PROTOTYPE
 {
     HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);

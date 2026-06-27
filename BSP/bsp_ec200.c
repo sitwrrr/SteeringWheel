@@ -33,7 +33,7 @@ static void EC200_SendAT(const char *cmd)
     char buf[256];
     sprintf(buf, "%s\r\n", cmd);
     HAL_UART_Transmit(&huart3, (uint8_t *)buf, strlen(buf), HAL_MAX_DELAY);
-    printf("[EC200 TX] %s\r\n", cmd);
+    printf("[EC200 TX] %s\r\n", cmd);  /* 将发送的AT命令打印到串口1，方便调试 */
 }
 
 /**
@@ -193,7 +193,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         if (rxIndex >= 2 && rxBuffer[rxIndex - 2] == 0x0D && rxBuffer[rxIndex - 1] == 0x0A)
         {
             rxBuffer[rxIndex] = '\0';
-            printf("[EC200 RX] %s", rxBuffer);
+            printf("[EC200 RX] %s", rxBuffer);  /* 将EC200回复内容打印到串口1，方便调试 */
 
             /* 检查特定响应 */
             if (strstr((char *)rxBuffer, "RDY") != NULL)
