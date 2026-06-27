@@ -65,6 +65,7 @@ void BSP_LCD_Init(void)
     /* bit4:BGR RGB顺序, bit3:MH 刷新方向 */
     LCD_WRITE_REG(0x36);
     LCD_WRITE_DATA(0x00);   /* 正常方向，RGB顺序 */
+    /* 注意：如果上电后颜色偏红/偏蓝，改为0x08（加BGR标志位） */
 
     /* Interface Pixel Format: 0x55=RGB565(16bit) */
     LCD_WRITE_REG(0x3A);
